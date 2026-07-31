@@ -1,5 +1,8 @@
 # BeastCare
 
+Current version: 0.1.1
+
+
 BeastCare is a Hunter pet-care addon for **World of Warcraft: Burning Crusade Anniversary**.
 
 It helps Hunters keep track of pet happiness, loyalty and feeding, with clear alerts when a pet needs attention.
@@ -98,3 +101,14 @@ Created by **ThuraNL**.
 - Loyalty level-up notifications
 - Draggable Feed Pet Effect timer window
 - Saved settings and window position
+
+
+### 0.1.1
+
+- Added addon icon
+- Added in-game Options panel
+- Added pet family and food types to `/bc status`
+- Added pet experience progress to `/bc status`
+- Added available training points to `/bc status`
+- Added `/bc inspect` for a selected player's pet
+- Improved chat output formatting
