@@ -1,5 +1,5 @@
 local ADDON_NAME = "BeastCare"
-local ADDON_AUTHOR = "ThuraNL"
+local ADDON_AUTHOR = "ThuraNL (PalletjeNL)"
 
 local DEFAULT_SETTINGS = {
     warningsEnabled = true,
@@ -107,33 +107,29 @@ local function GetPetFoodTypesText()
         return "Unavailable"
     end
 
-    local function CollectFoodTypes(...)
-        local foodTypes = {}
-        local numberOfValues = select("#", ...)
+    local foodTypes = { GetPetFoodTypes() }
+    local validFoodTypes = {}
 
-        for index = 1, numberOfValues do
-            local foodType = select(index, ...)
+    for index = 1, select("#", GetPetFoodTypes()) do
+        local foodType = foodTypes[index]
 
-            if type(foodType) == "string" and foodType ~= "" then
-                table.insert(foodTypes, foodType)
-            end
+        if type(foodType) == "string" and foodType ~= "" then
+            table.insert(validFoodTypes, foodType)
         end
-
-        if #foodTypes == 0 then
-            return "Unknown"
-        end
-
-        return table.concat(foodTypes, ", ")
     end
 
-    return CollectFoodTypes(GetPetFoodTypes())
+    if #validFoodTypes == 0 then
+        return "Unknown"
+    end
+
+    return table.concat(validFoodTypes, ", ")
 end
 
 local function PrintStatusLine(label, value)
     PrintMessage(string.format(
         "|cff9fc5e8%s:|r |cffffffff%s|r",
         label,
-        value
+        tostring(value)
     ))
 end
 
@@ -164,15 +160,15 @@ local function ShowPetStatus()
         currentExperience, maximumExperience = GetPetExperience()
     end
 
-	local availableTrainingPoints = nil
+    local availableTrainingPoints = nil
 
-	if GetPetTrainingPoints then
-		local totalTrainingPoints, spentTrainingPoints = GetPetTrainingPoints()
+    if GetPetTrainingPoints then
+        local totalTrainingPoints, spentTrainingPoints = GetPetTrainingPoints()
 
-		if totalTrainingPoints and spentTrainingPoints then
-			availableTrainingPoints = totalTrainingPoints - spentTrainingPoints
-		end
-	end
+        if totalTrainingPoints and spentTrainingPoints then
+            availableTrainingPoints = totalTrainingPoints - spentTrainingPoints
+        end
+    end
 
     PrintMessage("|cff00aaffPet Status|r")
 
@@ -210,36 +206,14 @@ local function ShowPetStatus()
     end
 
     if availableTrainingPoints ~= nil then
-		PrintStatusLine("Training Points", availableTrainingPoints)
-	else
-		PrintStatusLine("Training Points", "Unavailable")
-	end
-		PrintStatusLine("Happiness", GetHappinessText())
-		PrintStatusLine("Food types", GetPetFoodTypesText())
-		PrintStatusLine("Loyalty", GetLoyaltyText())
-	end
-
-local function ShowTrainingPointsDebug()
-    if not UnitExists("pet") then
-        PrintMessage("No active pet detected.")
-        return
+        PrintStatusLine("Training Points", availableTrainingPoints)
+    else
+        PrintStatusLine("Training Points", "Unavailable")
     end
 
-    local value1, value2, value3, value4, value5 = GetPetTrainingPoints()
-
-    PrintMessage("Training points debug:")
-    PrintMessage(string.format("Value 1: %s", tostring(value1)))
-    PrintMessage(string.format("Value 2: %s", tostring(value2)))
-    PrintMessage(string.format("Value 3: %s", tostring(value3)))
-    PrintMessage(string.format("Value 4: %s", tostring(value4)))
-    PrintMessage(string.format("Value 5: %s", tostring(value5)))
-
-    if GetNumPetSkills then
-        PrintMessage(string.format(
-            "Pet skills: %s",
-            tostring(GetNumPetSkills())
-        ))
-    end
+    PrintStatusLine("Happiness", GetHappinessText())
+    PrintStatusLine("Food types", GetPetFoodTypesText())
+    PrintStatusLine("Loyalty", GetLoyaltyText())
 end
 
 local function ShowSettings()
@@ -248,28 +222,35 @@ local function ShowSettings()
     local warningsStatus = settings.warningsEnabled and "Enabled" or "Disabled"
     local soundStatus = settings.soundEnabled and "Enabled" or "Disabled"
 
-    PrintMessage("Settings:")
-    PrintMessage(string.format("Warnings: |cffffffff%s|r", warningsStatus))
-    PrintMessage(string.format("Sound: |cffffffff%s|r", soundStatus))
-    PrintMessage(string.format(
-        "Warning interval: |cffffffff%d seconds|r",
-        settings.warningInterval
-    ))
+    PrintMessage("|cff00aaffSettings|r")
+    PrintStatusLine("Warnings", warningsStatus)
+    PrintStatusLine("Sound", soundStatus)
+    PrintStatusLine(
+        "Warning interval",
+        string.format("%d seconds", settings.warningInterval)
+    )
 end
 
 local function ShowHelp()
     PrintMessage("|cff00aaffCommands|r")
 
     PrintHelpLine("/bc status", "Show active pet status.")
+    PrintHelpLine(
+        "/bc inspect",
+        "Show the name and family of a selected player's pet."
+    )
     PrintHelpLine("/bc settings", "Show current BeastCare settings.")
     PrintHelpLine("/bc options", "Open BeastCare options.")
-	PrintHelpLine("/bc inspect", "Show the name and family of a selected player's pet.")
     PrintHelpLine("/bc interval 20", "Set warning interval.")
     PrintHelpLine("/bc warnings on/off", "Enable or disable feeding warnings.")
     PrintHelpLine("/bc sound on/off", "Enable or disable warning sounds.")
     PrintHelpLine(
         "/bc feedwindow reset",
         "Reset Feed Pet Effect window position."
+    )
+    PrintHelpLine(
+        "/bc mendwindow reset",
+        "Reset Mend Pet window position."
     )
 end
 
@@ -316,38 +297,58 @@ frame.lastWarningTime = nil
 frame.lastPetGUID = nil
 frame.lastLoyaltyLevel = nil
 
--- Feed Pet Effect window
-local feedWindow = CreateFrame("Frame", "BeastCareFeedWindow", UIParent)
+-- Creates a movable window for an active pet aura.
+local function CreateBuffTimerWindow(frameName, title, titleColor)
+    local window = CreateFrame("Frame", frameName, UIParent)
 
-feedWindow:SetSize(210, 50)
-feedWindow:SetFrameStrata("MEDIUM")
-feedWindow:SetMovable(true)
-feedWindow:EnableMouse(true)
-feedWindow:RegisterForDrag("LeftButton")
-feedWindow:SetClampedToScreen(true)
-feedWindow:Hide()
+    window:SetSize(210, 50)
+    window:SetFrameStrata("MEDIUM")
+    window:SetMovable(true)
+    window:EnableMouse(true)
+    window:RegisterForDrag("LeftButton")
+    window:SetClampedToScreen(true)
+    window:Hide()
 
-feedWindow.background = feedWindow:CreateTexture(nil, "BACKGROUND")
-feedWindow.background:SetAllPoints()
-feedWindow.background:SetColorTexture(0, 0, 0, 0.75)
+    window.background = window:CreateTexture(nil, "BACKGROUND")
+    window.background:SetAllPoints()
+    window.background:SetColorTexture(0, 0, 0, 0.75)
 
-feedWindow.icon = feedWindow:CreateTexture(nil, "ARTWORK")
-feedWindow.icon:SetSize(38, 38)
-feedWindow.icon:SetPoint("LEFT", feedWindow, "LEFT", 6, 0)
+    window.icon = window:CreateTexture(nil, "ARTWORK")
+    window.icon:SetSize(38, 38)
+    window.icon:SetPoint("LEFT", window, "LEFT", 6, 0)
 
-feedWindow.title = feedWindow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-feedWindow.title:SetPoint("TOPLEFT", feedWindow.icon, "TOPRIGHT", 8, -3)
-feedWindow.title:SetText("Feed Pet Effect")
-feedWindow.title:SetTextColor(1.0, 0.82, 0.0)
+    window.title = window:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    window.title:SetPoint("TOPLEFT", window.icon, "TOPRIGHT", 8, -3)
+    window.title:SetText(title)
+    window.title:SetTextColor(
+        titleColor[1],
+        titleColor[2],
+        titleColor[3]
+    )
 
-feedWindow.timer = feedWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-feedWindow.timer:SetPoint("BOTTOMLEFT", feedWindow.icon, "BOTTOMRIGHT", 8, 4)
-feedWindow.timer:SetText("")
+    window.timer = window:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    window.timer:SetPoint("BOTTOMLEFT", window.icon, "BOTTOMRIGHT", 8, 4)
+    window.timer:SetText("")
 
-local function SaveFeedWindowPosition()
-    local point, _, relativePoint, xOffset, yOffset = feedWindow:GetPoint(1)
+    return window
+end
 
-    GetSettings().feedWindowPosition = {
+local feedWindow = CreateBuffTimerWindow(
+    "BeastCareFeedWindow",
+    "Feed Pet Effect",
+    { 1.0, 0.82, 0.0 }
+)
+
+local mendWindow = CreateBuffTimerWindow(
+    "BeastCareMendWindow",
+    "Mend Pet",
+    { 0.35, 0.85, 1.0 }
+)
+
+local function SaveWindowPosition(window, settingName)
+    local point, _, relativePoint, xOffset, yOffset = window:GetPoint(1)
+
+    GetSettings()[settingName] = {
         point = point,
         relativePoint = relativePoint,
         xOffset = xOffset,
@@ -355,26 +356,26 @@ local function SaveFeedWindowPosition()
     }
 end
 
-local function SetDefaultFeedWindowPosition()
-    feedWindow:ClearAllPoints()
-    feedWindow:SetPoint("CENTER", UIParent, "CENTER", 0, -180)
+local function SetDefaultWindowPosition(window, xOffset, yOffset)
+    window:ClearAllPoints()
+    window:SetPoint("CENTER", UIParent, "CENTER", xOffset, yOffset)
 end
 
-local function LoadFeedWindowPosition()
-    local position = GetSettings().feedWindowPosition
+local function LoadWindowPosition(window, settingName, xOffset, yOffset)
+    local position = GetSettings()[settingName]
 
     if not position then
-        SetDefaultFeedWindowPosition()
+        SetDefaultWindowPosition(window, xOffset, yOffset)
         return
     end
 
-    feedWindow:ClearAllPoints()
-    feedWindow:SetPoint(
+    window:ClearAllPoints()
+    window:SetPoint(
         position.point or "CENTER",
         UIParent,
         position.relativePoint or "CENTER",
-        position.xOffset or 0,
-        position.yOffset or -180
+        position.xOffset or xOffset,
+        position.yOffset or yOffset
     )
 end
 
@@ -384,8 +385,27 @@ end)
 
 feedWindow:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
-    SaveFeedWindowPosition()
+    SaveWindowPosition(self, "feedWindowPosition")
 end)
+
+mendWindow:SetScript("OnDragStart", function(self)
+    self:StartMoving()
+end)
+
+mendWindow:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    SaveWindowPosition(self, "mendWindowPosition")
+end)
+
+local function ResetFeedWindowPosition()
+    GetSettings().feedWindowPosition = nil
+    SetDefaultWindowPosition(feedWindow, 0, -180)
+end
+
+local function ResetMendWindowPosition()
+    GetSettings().mendWindowPosition = nil
+    SetDefaultWindowPosition(mendWindow, 0, -240)
+end
 
 local function ResetHappinessWarningState()
     frame.lastHappinessWarning = nil
@@ -405,7 +425,6 @@ local function CheckPetHappiness()
         return
     end
 
-    -- Feeding is not available while the Hunter or pet is in combat.
     if UnitAffectingCombat("player") or UnitAffectingCombat("pet") then
         ResetHappinessWarningState()
         return
@@ -417,7 +436,6 @@ local function CheckPetHappiness()
 
     local happiness = GetPetHappiness()
 
-    -- Warnings are only needed for Content or Unhappy pets.
     if happiness ~= 1 and happiness ~= 2 then
         ResetHappinessWarningState()
         return
@@ -455,8 +473,6 @@ local function CheckPetLoyalty()
         return
     end
 
-    -- Store the current loyalty level for a newly detected pet.
-    -- This prevents an announcement at login or when summoning a pet.
     if frame.lastPetGUID ~= petGUID then
         frame.lastPetGUID = petGUID
         frame.lastLoyaltyLevel = loyaltyLevel
@@ -491,7 +507,7 @@ local function CheckPetLoyalty()
     frame.lastLoyaltyLevel = loyaltyLevel
 end
 
-local function GetFeedPetAura()
+local function GetPetAuraByName(auraName, allowRankSuffix)
     if not UnitExists("pet") then
         return nil
     end
@@ -507,7 +523,13 @@ local function GetFeedPetAura()
             break
         end
 
-        if name == "Feed Pet Effect" then
+        local matchesAura = name == auraName
+
+        if allowRankSuffix and type(name) == "string" then
+            matchesAura = string.find(name, "^" .. auraName) ~= nil
+        end
+
+        if matchesAura then
             return icon, duration, expirationTime
         end
     end
@@ -515,15 +537,18 @@ local function GetFeedPetAura()
     return nil
 end
 
-local function UpdateFeedWindow()
-    local icon, duration, expirationTime = GetFeedPetAura()
+local function UpdateBuffTimerWindow(window, auraName, allowRankSuffix)
+    local icon, duration, expirationTime = GetPetAuraByName(
+        auraName,
+        allowRankSuffix
+    )
 
     if not icon then
-        feedWindow:Hide()
+        window:Hide()
         return
     end
 
-    feedWindow.icon:SetTexture(icon)
+    window.icon:SetTexture(icon)
 
     local remainingTime = 0
 
@@ -534,18 +559,19 @@ local function UpdateFeedWindow()
     end
 
     if remainingTime > 0 then
-        feedWindow.timer:SetText(
+        window.timer:SetText(
             string.format("%d seconds remaining", remainingTime)
         )
     else
-        feedWindow.timer:SetText("Active")
+        window.timer:SetText("Active")
     end
 
-    feedWindow:Show()
+    window:Show()
 end
 
 -- Options panel
 local optionsPanel = CreateFrame("Frame", "BeastCareOptionsPanel", UIParent)
+
 optionsPanel.name = ADDON_NAME
 
 optionsPanel.title = optionsPanel:CreateFontString(
@@ -561,7 +587,13 @@ optionsPanel.subtitle = optionsPanel:CreateFontString(
     "ARTWORK",
     "GameFontHighlightSmall"
 )
-optionsPanel.subtitle:SetPoint("TOPLEFT", optionsPanel.title, "BOTTOMLEFT", 0, -8)
+optionsPanel.subtitle:SetPoint(
+    "TOPLEFT",
+    optionsPanel.title,
+    "BOTTOMLEFT",
+    0,
+    -8
+)
 optionsPanel.subtitle:SetText(
     "Hunter pet-care tools for Burning Crusade Anniversary."
 )
@@ -671,21 +703,39 @@ _G[optionsPanel.intervalSlider:GetName() .. "Low"]:SetText("5 seconds")
 _G[optionsPanel.intervalSlider:GetName() .. "High"]:SetText("60 seconds")
 _G[optionsPanel.intervalSlider:GetName() .. "Text"]:SetText("")
 
-optionsPanel.resetButton = CreateFrame(
+optionsPanel.resetFeedButton = CreateFrame(
     "Button",
     "BeastCareResetFeedWindowButton",
     optionsPanel,
     "UIPanelButtonTemplate"
 )
-optionsPanel.resetButton:SetSize(250, 24)
-optionsPanel.resetButton:SetPoint(
+optionsPanel.resetFeedButton:SetSize(260, 24)
+optionsPanel.resetFeedButton:SetPoint(
     "TOPLEFT",
     optionsPanel.intervalSlider,
     "BOTTOMLEFT",
     0,
     -35
 )
-optionsPanel.resetButton:SetText("Reset Feed Pet Effect Window Position")
+optionsPanel.resetFeedButton:SetText(
+    "Reset Feed Pet Effect Window Position"
+)
+
+optionsPanel.resetMendButton = CreateFrame(
+    "Button",
+    "BeastCareResetMendWindowButton",
+    optionsPanel,
+    "UIPanelButtonTemplate"
+)
+optionsPanel.resetMendButton:SetSize(260, 24)
+optionsPanel.resetMendButton:SetPoint(
+    "TOPLEFT",
+    optionsPanel.resetFeedButton,
+    "BOTTOMLEFT",
+    0,
+    -8
+)
+optionsPanel.resetMendButton:SetText("Reset Mend Pet Window Position")
 
 optionsPanel.helpText = optionsPanel:CreateFontString(
     nil,
@@ -694,7 +744,7 @@ optionsPanel.helpText = optionsPanel:CreateFontString(
 )
 optionsPanel.helpText:SetPoint(
     "TOPLEFT",
-    optionsPanel.resetButton,
+    optionsPanel.resetMendButton,
     "BOTTOMLEFT",
     0,
     -22
@@ -742,10 +792,14 @@ optionsPanel.intervalSlider:SetScript("OnValueChanged", function(_, value)
     ResetHappinessWarningState()
 end)
 
-optionsPanel.resetButton:SetScript("OnClick", function()
-    GetSettings().feedWindowPosition = nil
-    SetDefaultFeedWindowPosition()
+optionsPanel.resetFeedButton:SetScript("OnClick", function()
+    ResetFeedWindowPosition()
     PrintMessage("Feed Pet Effect window position reset.")
+end)
+
+optionsPanel.resetMendButton:SetScript("OnClick", function()
+    ResetMendWindowPosition()
+    PrintMessage("Mend Pet window position reset.")
 end)
 
 optionsPanel:SetScript("OnShow", function()
@@ -753,7 +807,6 @@ optionsPanel:SetScript("OnShow", function()
 end)
 
 local function RegisterOptionsPanel()
-    -- Newer clients use the Settings API.
     if Settings and Settings.RegisterCanvasLayoutCategory then
         local category = Settings.RegisterCanvasLayoutCategory(
             optionsPanel,
@@ -765,7 +818,6 @@ local function RegisterOptionsPanel()
         return
     end
 
-    -- TBC Classic and older clients use InterfaceOptions.
     if InterfaceOptions_AddCategory then
         InterfaceOptions_AddCategory(optionsPanel)
     end
@@ -789,13 +841,12 @@ end
 
 -- Timers
 local elapsedSinceLastCheck = 0
-local elapsedSinceFeedCheck = 0
+local elapsedSinceBuffCheck = 0
 
 frame:SetScript("OnUpdate", function(_, elapsed)
     elapsedSinceLastCheck = elapsedSinceLastCheck + elapsed
-    elapsedSinceFeedCheck = elapsedSinceFeedCheck + elapsed
+    elapsedSinceBuffCheck = elapsedSinceBuffCheck + elapsed
 
-    -- General pet status checks run once per second.
     if elapsedSinceLastCheck >= 1 then
         elapsedSinceLastCheck = 0
 
@@ -803,11 +854,20 @@ frame:SetScript("OnUpdate", function(_, elapsed)
         CheckPetLoyalty()
     end
 
-    -- Update the Feed Pet Effect timer four times per second.
-    if elapsedSinceFeedCheck >= 0.25 then
-        elapsedSinceFeedCheck = 0
+    if elapsedSinceBuffCheck >= 0.25 then
+        elapsedSinceBuffCheck = 0
 
-        UpdateFeedWindow()
+        UpdateBuffTimerWindow(
+            feedWindow,
+            "Feed Pet Effect",
+            false
+        )
+
+        UpdateBuffTimerWindow(
+            mendWindow,
+            "Mend Pet",
+            true
+        )
     end
 end)
 
@@ -827,21 +887,16 @@ SlashCmdList["BEASTCARE"] = function(message)
         ShowPetStatus()
         return
     end
-	
-	if command == "inspect" then
-		if BeastCare and BeastCare.InspectTargetPet then
-			BeastCare.InspectTargetPet()
-		else
-			PrintMessage("Pet Inspect module is not available.")
-		end
 
-		return
-	end
-	
-	if command == "trainingdebug" then
-		ShowTrainingPointsDebug()
-		return
-	end
+    if command == "inspect" then
+        if BeastCare and BeastCare.InspectTargetPet then
+            BeastCare.InspectTargetPet()
+        else
+            PrintMessage("Pet Inspect module is not available.")
+        end
+
+        return
+    end
 
     if command == "settings" then
         ShowSettings()
@@ -855,15 +910,26 @@ SlashCmdList["BEASTCARE"] = function(message)
 
     if command == "feedwindow" then
         if argument == "reset" then
-            GetSettings().feedWindowPosition = nil
-            SetDefaultFeedWindowPosition()
-
+            ResetFeedWindowPosition()
             PrintMessage("Feed Pet Effect window position reset.")
             return
         end
 
         PrintMessage(
             "Use |cffffffff/bc feedwindow reset|r to reset the window position."
+        )
+        return
+    end
+
+    if command == "mendwindow" then
+        if argument == "reset" then
+            ResetMendWindowPosition()
+            PrintMessage("Mend Pet window position reset.")
+            return
+        end
+
+        PrintMessage(
+            "Use |cffffffff/bc mendwindow reset|r to reset the window position."
         )
         return
     end
@@ -947,7 +1013,21 @@ frame:SetScript("OnEvent", function(self, event, unit)
         self:UnregisterEvent("PLAYER_ENTERING_WORLD")
 
         GetSettings()
-        LoadFeedWindowPosition()
+
+        LoadWindowPosition(
+            feedWindow,
+            "feedWindowPosition",
+            0,
+            -180
+        )
+
+        LoadWindowPosition(
+            mendWindow,
+            "mendWindowPosition",
+            0,
+            -240
+        )
+
         RegisterOptionsPanel()
 
         PrintMessage(string.format(
