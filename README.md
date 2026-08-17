@@ -90,7 +90,6 @@ Created by **ThuraNL**.
 ## Version History
 
 ### 0.1.0
-
 - Initial release
 - Pet status command
 - Happiness and feeding alerts
@@ -98,3 +97,22 @@ Created by **ThuraNL**.
 - Loyalty level-up notifications
 - Draggable Feed Pet Effect timer window
 - Saved settings and window position
+
+
+### 0.1.1
+- Added custom addon icon
+- Added in-game Options panel
+- Added pet family and food types to `/bc status`
+- Added pet experience and progress percentage to `/bc status`
+- Added available training points to `/bc status`
+- Added `/bc inspect` for a selected player's pet
+- Improved `/bc status` and `/bc help` chat formatting
+- Added separate `BeastCare_Inspect.lua` module
+
+
+### 0.1.2
+- Added draggable Mend Pet timer window
+- Added `/bc mendwindow reset`
+- Added Mend Pet window reset button to the Options panel
+- Improved internal buff-timer window handling
+- Removed temporary training-points debug command
