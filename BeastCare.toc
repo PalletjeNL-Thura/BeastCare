@@ -1,8 +1,8 @@
 ## Title: BeastCare
-## Interface: 20506
+## Interface: 20506, 11509
 ## Notes: Hunter pet care for TBC Anniversary
 ## Author: ThuraNL (PalletjeNL)
-## Version: 0.1.2
+## Version: 0.1.3
 ## SavedVariables: BeastCareDB
 ## IconTexture: Interface\AddOns\BeastCare\BeastCare
 
