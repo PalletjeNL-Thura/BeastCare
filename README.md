@@ -1,6 +1,9 @@
 # BeastCare
 
-BeastCare is a Hunter pet-care addon for **World of Warcraft: Burning Crusade Anniversary**.
+BeastCare is a Hunter pet-care addon for; 
+**World of Warcraft: Classic Era: Vanilla**
+and
+**World of Warcraft: Anniversary: The Burning Crusade**.
 
 It helps Hunters keep track of pet happiness, loyalty and feeding, with clear alerts when a pet needs attention.
 
@@ -36,6 +39,14 @@ It helps Hunters keep track of pet happiness, loyalty and feeding, with clear al
   - Works without selecting your pet
   - Draggable window
   - Window position is saved
+  
+- Mend Pet timer:
+  - Shows the active Mend Pet effect and remaining duration
+  - Works with all Mend Pet spell ranks
+  - Works without selecting your pet
+  - Draggable window
+  - Window position is saved
+  - Can be enabled or disabled in the Options panel
 
 - Persistent settings:
   - Warning interval
@@ -78,14 +89,16 @@ It helps Hunters keep track of pet happiness, loyalty and feeding, with clear al
 
 The warning interval can be set from **5** to **60** seconds.
 
-## Supported Game Version
+## Supported Game Versions
 
+- World of Warcraft: Classic Era
+  - Interface version: `11509`
 - World of Warcraft: Burning Crusade Anniversary
-- Interface version: `20506`
+  - Interface version: `20506`
 
 ## Author
 
-Created by **ThuraNL**.
+Created by **ThuraNL**(PalletjeNL).
 
 ## Version History
 
@@ -116,3 +129,9 @@ Created by **ThuraNL**.
 - Added Mend Pet window reset button to the Options panel
 - Improved internal buff-timer window handling
 - Removed temporary training-points debug command
+
+
+### 0.1.3
+- Added an option to enable or disable the Mend Pet timer
+- Added the Mend Pet timer status to `/bc settings`
+- Mend Pet timer is enabled by default

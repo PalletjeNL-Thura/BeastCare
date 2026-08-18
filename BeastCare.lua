@@ -4,6 +4,7 @@ local ADDON_AUTHOR = "ThuraNL (PalletjeNL)"
 local DEFAULT_SETTINGS = {
     warningsEnabled = true,
     soundEnabled = true,
+    mendWindowEnabled = true,
     warningInterval = 20,
 }
 
@@ -221,10 +222,12 @@ local function ShowSettings()
 
     local warningsStatus = settings.warningsEnabled and "Enabled" or "Disabled"
     local soundStatus = settings.soundEnabled and "Enabled" or "Disabled"
+    local mendTimerStatus = settings.mendWindowEnabled and "Enabled" or "Disabled"
 
     PrintMessage("|cff00aaffSettings|r")
     PrintStatusLine("Warnings", warningsStatus)
     PrintStatusLine("Sound", soundStatus)
+    PrintStatusLine("Mend Pet timer", mendTimerStatus)
     PrintStatusLine(
         "Warning interval",
         string.format("%d seconds", settings.warningInterval)
@@ -654,6 +657,34 @@ optionsPanel.soundCheckbox.label:SetPoint(
 )
 optionsPanel.soundCheckbox.label:SetText("Enable warning sounds")
 
+optionsPanel.mendWindowCheckbox = CreateFrame(
+    "CheckButton",
+    "BeastCareMendWindowCheckbox",
+    optionsPanel,
+    "InterfaceOptionsCheckButtonTemplate"
+)
+optionsPanel.mendWindowCheckbox:SetPoint(
+    "TOPLEFT",
+    optionsPanel.soundCheckbox,
+    "BOTTOMLEFT",
+    0,
+    -8
+)
+optionsPanel.mendWindowCheckbox.label =
+    optionsPanel.mendWindowCheckbox:CreateFontString(
+        nil,
+        "ARTWORK",
+        "GameFontNormal"
+    )
+optionsPanel.mendWindowCheckbox.label:SetPoint(
+    "LEFT",
+    optionsPanel.mendWindowCheckbox,
+    "RIGHT",
+    2,
+    1
+)
+optionsPanel.mendWindowCheckbox.label:SetText("Show Mend Pet timer")
+
 optionsPanel.intervalLabel = optionsPanel:CreateFontString(
     nil,
     "ARTWORK",
@@ -661,7 +692,7 @@ optionsPanel.intervalLabel = optionsPanel:CreateFontString(
 )
 optionsPanel.intervalLabel:SetPoint(
     "TOPLEFT",
-    optionsPanel.soundCheckbox,
+    optionsPanel.mendWindowCheckbox,
     "BOTTOMLEFT",
     2,
     -30
@@ -760,6 +791,7 @@ local function UpdateOptionsPanel()
 
     optionsPanel.warningCheckbox:SetChecked(settings.warningsEnabled)
     optionsPanel.soundCheckbox:SetChecked(settings.soundEnabled)
+    optionsPanel.mendWindowCheckbox:SetChecked(settings.mendWindowEnabled)
     optionsPanel.intervalSlider:SetValue(settings.warningInterval)
     optionsPanel.intervalValue:SetText(
         string.format("%d seconds", settings.warningInterval)
@@ -775,6 +807,16 @@ end)
 
 optionsPanel.soundCheckbox:SetScript("OnClick", function(self)
     GetSettings().soundEnabled = self:GetChecked() and true or false
+end)
+
+optionsPanel.mendWindowCheckbox:SetScript("OnClick", function(self)
+    local enabled = self:GetChecked() and true or false
+
+    GetSettings().mendWindowEnabled = enabled
+
+    if not enabled then
+        mendWindow:Hide()
+    end
 end)
 
 optionsPanel.intervalSlider:SetScript("OnValueChanged", function(_, value)
@@ -863,11 +905,15 @@ frame:SetScript("OnUpdate", function(_, elapsed)
             false
         )
 
-        UpdateBuffTimerWindow(
-            mendWindow,
-            "Mend Pet",
-            true
-        )
+        if GetSettings().mendWindowEnabled then
+            UpdateBuffTimerWindow(
+                mendWindow,
+                "Mend Pet",
+                true
+            )
+        else
+            mendWindow:Hide()
+        end
     end
 end)
 
