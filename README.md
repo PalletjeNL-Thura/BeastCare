@@ -1,31 +1,26 @@
 # BeastCare
 
-BeastCare is a Hunter pet-care addon for:
+BeastCare is a Hunter pet-care addon for; 
+**World of Warcraft: Classic Era: Vanilla**
+and
+**World of Warcraft: Anniversary: The Burning Crusade**.
 
-- **World of Warcraft: Classic**
-- **World of Warcraft: Anniversary: The Burning Crusade**
-- **World of Warcraft: Forever Beta**
-
-It helps Hunters track pet happiness, loyalty, feeding, healing and training information without adding unnecessary UI clutter.
+It helps Hunters keep track of pet happiness, loyalty and feeding, with clear alerts when a pet needs attention.
 
 ## Features
 
-- Active pet status via `/bc status`:
+- Pet status command with:
   - Pet name
-  - Pet family
   - Pet level
   - Health
-  - Experience and progress percentage
-  - Available training points
   - Happiness
-  - Accepted food types
   - Loyalty level and title
 
 - Feeding reminders:
   - Raid-warning-style visual alert
-  - Optional audio alert
+  - Audio alert
   - Separate messages for Content and Unhappy pets
-  - Configurable repeat interval from 5 to 60 seconds
+  - Configurable repeat interval
 
 - Smart warning behaviour:
   - No warning while you are in combat
@@ -40,11 +35,11 @@ It helps Hunters track pet happiness, loyalty, feeding, healing and training inf
   - Subtle sound effect
 
 - Feed Pet Effect timer:
-  - Shows the active Feed Pet Effect buff and remaining duration
+  - Shows the active Feed Pet Effect buff and its remaining duration
   - Works without selecting your pet
   - Draggable window
   - Window position is saved
-
+  
 - Mend Pet timer:
   - Shows the active Mend Pet effect and remaining duration
   - Works with all Mend Pet spell ranks
@@ -53,37 +48,26 @@ It helps Hunters track pet happiness, loyalty, feeding, healing and training inf
   - Window position is saved
   - Can be enabled or disabled in the Options panel
 
-- Pet inspection:
-  - Inspect a selected player's pet with `/bc inspect`
-  - Shows pet name and family
-
 - Persistent settings:
   - Warning interval
-  - Feeding warnings enabled/disabled
-  - Warning sound enabled/disabled
-  - Mend Pet timer enabled/disabled
+  - Warning enabled/disabled
+  - Sound enabled/disabled
   - Feed Pet Effect window position
-  - Mend Pet window position
 
 ## Installation
 
-1. Download the BeastCare ZIP file.
-2. Extract the `BeastCare` folder into your WoW AddOns directory:
+1. Download or copy the `BeastCare` folder.
+2. Place it in your WoW AddOns directory:
 
-    ```text
     World of Warcraft\Interface\AddOns\
-    ```
 
 3. The final structure should look like this:
 
-    ```text
     Interface\AddOns\BeastCare\
     ├── BeastCare.toc
     ├── BeastCare.lua
-    ├── BeastCare_Inspect.lua
     ├── BeastCare.tga
     └── README.md
-    ```
 
 4. Start World of Warcraft.
 5. At the character-selection screen, click **AddOns** and make sure BeastCare is enabled.
@@ -94,9 +78,7 @@ It helps Hunters track pet happiness, loyalty, feeding, healing and training inf
 |---|---|
 | `/bc` or `/beastcare` | Show addon version and basic help |
 | `/bc status` | Show active pet status |
-| `/bc inspect` | Show the name and family of a selected player's pet |
 | `/bc settings` | Show current BeastCare settings |
-| `/bc options` | Open BeastCare options |
 | `/bc help` | Show available commands |
 | `/bc interval 20` | Set the feeding-warning interval in seconds |
 | `/bc warnings on` | Enable feeding warnings |
@@ -104,30 +86,23 @@ It helps Hunters track pet happiness, loyalty, feeding, healing and training inf
 | `/bc sound on` | Enable warning sounds |
 | `/bc sound off` | Disable warning sounds |
 | `/bc feedwindow reset` | Reset the Feed Pet Effect window position |
-| `/bc mendwindow reset` | Reset the Mend Pet window position |
 
 The warning interval can be set from **5** to **60** seconds.
 
 ## Supported Game Versions
 
-- **World of Warcraft: Classic**
+- World of Warcraft: Classic Era
   - Interface version: `11509`
-
-- **World of Warcraft: Anniversary: The Burning Crusade**
+- World of Warcraft: Burning Crusade Anniversary
   - Interface version: `20506`
-
-- **World of Warcraft: Forever Beta**
-  - Interface version: `16001`
-  - Beta compatibility is being tested.
 
 ## Author
 
-Created by **ThuraNL (PalletjeNL)**.
+Created by **ThuraNL**(PalletjeNL).
 
 ## Version History
 
 ### 0.1.0
-
 - Initial release
 - Pet status command
 - Happiness and feeding alerts
@@ -136,8 +111,8 @@ Created by **ThuraNL (PalletjeNL)**.
 - Draggable Feed Pet Effect timer window
 - Saved settings and window position
 
-### 0.1.1
 
+### 0.1.1
 - Added custom addon icon
 - Added in-game Options panel
 - Added pet family and food types to `/bc status`
@@ -147,17 +122,16 @@ Created by **ThuraNL (PalletjeNL)**.
 - Improved `/bc status` and `/bc help` chat formatting
 - Added separate `BeastCare_Inspect.lua` module
 
-### 0.1.2
 
+### 0.1.2
 - Added draggable Mend Pet timer window
 - Added `/bc mendwindow reset`
 - Added Mend Pet window reset button to the Options panel
 - Improved internal buff-timer window handling
 - Removed temporary training-points debug command
 
-### 0.1.3
 
+### 0.1.3
 - Added an option to enable or disable the Mend Pet timer
 - Added the Mend Pet timer status to `/bc settings`
 - Mend Pet timer is enabled by default
-- Added WoW Forever Beta interface compatibility
