@@ -2,7 +2,7 @@
 
 BeastCare is a Hunter pet-care addon for:
 
-- **World of Warcraft: Classic Era**
+- **World of Warcraft: Classic : Vanilla**
 - **World of Warcraft: Anniversary: The Burning Crusade**
 - **World of Warcraft: Forever Beta**
 
@@ -38,6 +38,11 @@ It helps Hunters track pet happiness, loyalty, feeding, healing and training inf
   - Chat message
   - Gold-coloured on-screen notification
   - Subtle sound effect
+  
+- Pet level-up notifications:
+ - Chat message
+ - Gold-coloured on-screen notification
+ - Subtle sound effect
 
 - Feed Pet Effect timer:
   - Shows the active Feed Pet Effect buff and remaining duration
@@ -80,6 +85,7 @@ It helps Hunters track pet happiness, loyalty, feeding, healing and training inf
     Interface\AddOns\BeastCare\
     ├── BeastCare.toc
     ├── BeastCare.lua
+	├── BeastCare_Forever.lua
     ├── BeastCare_Inspect.lua
     ├── BeastCare.tga
     └── README.md
@@ -110,7 +116,7 @@ The warning interval can be set from **5** to **60** seconds.
 
 ## Supported Game Versions
 
-- **World of Warcraft: Classic Era**
+- **World of Warcraft: Classic:Vanilla**
   - Interface version: `11509`
 
 - **World of Warcraft: Anniversary: The Burning Crusade**
@@ -119,6 +125,13 @@ The warning interval can be set from **5** to **60** seconds.
 - **World of Warcraft: Forever Beta**
   - Interface version: `16001`
   - Beta compatibility is being tested.
+  
+ ## Known Issues
+
+WoW Forever Beta limitation!
+WoW Forever Beta currently has a known Blizzard client issue with addon SavedVariables.
+BeastCare settings and timer-window positions can reset after /reload, logging out or restarting the game. The addon saves the information correctly, but the WoW Forever client may fail to load the saved data back into the addon.
+This is a WoW Forever Beta client issue that also affects other addons. BeastCare keeps normal SavedVariables support, so settings and window positions work normally in Classic Vanilla and TBC Anniversary. 
 
 ## Author
 
@@ -161,3 +174,18 @@ Created by **ThuraNL (PalletjeNL)**.
 - Added the Mend Pet timer status to `/bc settings`
 - Mend Pet timer is enabled by default
 - Added WoW Forever Beta interface compatibility
+
+## 0.2.0
+
+- Added tested WoW Forever Beta support
+- Added WoW Forever support for:
+    Happiness
+    Loyalty titles
+    Food types
+    Training points
+    Feed Pet Effect timer
+    Mend Pet timer
+- Added loyalty-title change notifications for WoW Forever
+- Added pet level-up notifications for all supported game versions
+- Kept Classic Vanilla and TBC Anniversary support
+- Documented the known WoW Forever Beta SavedVariables limitation

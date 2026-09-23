@@ -1,3 +1,5 @@
+BeastCare = BeastCare or {}
+
 local ADDON_NAME = "BeastCare"
 local ADDON_AUTHOR = "ThuraNL (PalletjeNL)"
 
@@ -46,12 +48,73 @@ local function FormatNumber(number)
     return BreakUpLargeNumbers(number or 0)
 end
 
-local function GetHappinessText()
-    if not GetPetHappiness then
-        return "Unavailable"
+-- Shared compatibility functions.
+-- WoW Forever functions come from BeastCare_Forever.lua.
+-- Classic Era and TBC Anniversary use their original APIs.
+
+local function GetCurrentPetHappiness()
+    if BeastCare and type(BeastCare.GetPetHappiness) == "function" then
+        return BeastCare.GetPetHappiness()
     end
 
-    local happiness = GetPetHappiness()
+    if type(GetPetHappiness) == "function" then
+        return GetPetHappiness()
+    end
+
+    return nil
+end
+
+local function GetCurrentPetLoyalty()
+    if BeastCare and type(BeastCare.GetPetLoyalty) == "function" then
+        return BeastCare.GetPetLoyalty()
+    end
+
+    if type(GetPetLoyalty) == "function" then
+        return GetPetLoyalty()
+    end
+
+    return nil
+end
+
+local function GetCurrentPetFoodTypes()
+    if BeastCare and type(BeastCare.GetPetFoodTypes) == "function" then
+        return BeastCare.GetPetFoodTypes()
+    end
+
+    if type(GetPetFoodTypes) == "function" then
+        return GetPetFoodTypes()
+    end
+
+    return nil
+end
+
+local function GetCurrentPetTrainingPoints()
+    if BeastCare and type(BeastCare.GetPetTrainingPoints) == "function" then
+        return BeastCare.GetPetTrainingPoints()
+    end
+
+    if type(GetPetTrainingPoints) == "function" then
+        local totalTrainingPoints, spentTrainingPoints = GetPetTrainingPoints()
+
+        if totalTrainingPoints and spentTrainingPoints then
+            return totalTrainingPoints - spentTrainingPoints, spentTrainingPoints
+        end
+    end
+
+    return nil, nil
+end
+
+local function IsWoWForeverPetAPI()
+    return BeastCare
+        and type(BeastCare.GetPetHappiness) == "function"
+end
+
+local function GetHappinessText()
+    local happiness = GetCurrentPetHappiness()
+
+    if not happiness then
+        return "Unavailable"
+    end
 
     local happinessLabels = {
         [1] = "Unhappy",
@@ -63,14 +126,15 @@ local function GetHappinessText()
 end
 
 local function GetLoyaltyInfo()
-    if not GetPetLoyalty then
-        return nil, nil
-    end
-
-    local loyaltyText = GetPetLoyalty()
+    local loyaltyText = GetCurrentPetLoyalty()
 
     if not loyaltyText or loyaltyText == "" then
         return nil, nil
+    end
+
+    -- WoW Forever returns only the current title, for example "Rebellious".
+    if IsWoWForeverPetAPI() then
+        return nil, loyaltyText
     end
 
     local loyaltyLevel, loyaltyName = string.match(
@@ -84,8 +148,13 @@ end
 local function GetLoyaltyText()
     local loyaltyLevel, loyaltyName = GetLoyaltyInfo()
 
-    if not loyaltyLevel or not loyaltyName then
+    if not loyaltyName then
         return "Unknown"
+    end
+
+    -- WoW Forever does not expose the numerical loyalty level.
+    if not loyaltyLevel then
+        return loyaltyName
     end
 
     return string.format("Level %d - %s", loyaltyLevel, loyaltyName)
@@ -104,15 +173,35 @@ local function GetPetFoodTypesText()
         return "Unknown"
     end
 
-    if not GetPetFoodTypes then
+    local results = { pcall(GetCurrentPetFoodTypes) }
+
+    if not results[1] then
         return "Unavailable"
     end
 
-    local foodTypes = { GetPetFoodTypes() }
+    local foodTypes = results[2]
+
+    if type(foodTypes) == "table" then
+        local validFoodTypes = {}
+
+        for _, foodType in pairs(foodTypes) do
+            if type(foodType) == "string" and foodType ~= "" then
+                table.insert(validFoodTypes, foodType)
+            end
+        end
+
+        if #validFoodTypes == 0 then
+            return "Unknown"
+        end
+
+        return table.concat(validFoodTypes, ", ")
+    end
+
+    -- Classic/TBC returns multiple strings instead of a table.
     local validFoodTypes = {}
 
-    for index = 1, select("#", GetPetFoodTypes()) do
-        local foodType = foodTypes[index]
+    for index = 2, #results do
+        local foodType = results[index]
 
         if type(foodType) == "string" and foodType ~= "" then
             table.insert(validFoodTypes, foodType)
@@ -161,18 +250,9 @@ local function ShowPetStatus()
         currentExperience, maximumExperience = GetPetExperience()
     end
 
-    local availableTrainingPoints = nil
-
-    if GetPetTrainingPoints then
-        local totalTrainingPoints, spentTrainingPoints = GetPetTrainingPoints()
-
-        if totalTrainingPoints and spentTrainingPoints then
-            availableTrainingPoints = totalTrainingPoints - spentTrainingPoints
-        end
-    end
+    local availableTrainingPoints = GetCurrentPetTrainingPoints()
 
     PrintMessage("|cff00aaffPet Status|r")
-
     PrintStatusLine("Name", petName)
     PrintStatusLine("Family", petFamily)
     PrintStatusLine("Level", petLevel)
@@ -228,6 +308,7 @@ local function ShowSettings()
     PrintStatusLine("Warnings", warningsStatus)
     PrintStatusLine("Sound", soundStatus)
     PrintStatusLine("Mend Pet timer", mendTimerStatus)
+
     PrintStatusLine(
         "Warning interval",
         string.format("%d seconds", settings.warningInterval)
@@ -294,13 +375,13 @@ local function ShowLoyaltyAnnouncement(message)
 end
 
 local frame = CreateFrame("Frame")
-
 frame.lastHappinessWarning = nil
 frame.lastWarningTime = nil
 frame.lastPetGUID = nil
 frame.lastLoyaltyLevel = nil
+frame.lastPetLevelGUID = nil
+frame.lastPetLevel = nil
 
--- Creates a movable window for an active pet aura.
 local function CreateBuffTimerWindow(frameName, title, titleColor)
     local window = CreateFrame("Frame", frameName, UIParent)
 
@@ -329,7 +410,11 @@ local function CreateBuffTimerWindow(frameName, title, titleColor)
         titleColor[3]
     )
 
-    window.timer = window:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    window.timer = window:CreateFontString(
+        nil,
+        "OVERLAY",
+        "GameFontHighlight"
+    )
     window.timer:SetPoint("BOTTOMLEFT", window.icon, "BOTTOMRIGHT", 8, 4)
     window.timer:SetText("")
 
@@ -433,11 +518,7 @@ local function CheckPetHappiness()
         return
     end
 
-    if not GetPetHappiness then
-        return
-    end
-
-    local happiness = GetPetHappiness()
+    local happiness = GetCurrentPetHappiness()
 
     if happiness ~= 1 and happiness ~= 2 then
         ResetHappinessWarningState()
@@ -446,6 +527,7 @@ local function CheckPetHappiness()
 
     local currentTime = GetTime()
     local happinessChanged = frame.lastHappinessWarning ~= happiness
+
     local warningDue = not frame.lastWarningTime
         or (currentTime - frame.lastWarningTime >= settings.warningInterval)
 
@@ -472,7 +554,50 @@ local function CheckPetLoyalty()
     local petGUID = UnitGUID("pet")
     local loyaltyLevel, loyaltyName = GetLoyaltyInfo()
 
-    if not petGUID or not loyaltyLevel or not loyaltyName then
+    if not petGUID or not loyaltyName then
+        return
+    end
+
+    -- WoW Forever supplies a title, such as Rebellious or Unruly,
+    -- but does not supply a numerical loyalty level.
+    if IsWoWForeverPetAPI() then
+        if frame.lastPetGUID ~= petGUID then
+            frame.lastPetGUID = petGUID
+            frame.lastLoyaltyLevel = loyaltyName
+
+            PrintMessage(string.format(
+                "Tracking %s at Loyalty - %s.",
+                UnitName("pet") or "pet",
+                loyaltyName
+            ))
+            return
+        end
+
+        if frame.lastLoyaltyLevel == nil then
+            frame.lastLoyaltyLevel = loyaltyName
+            return
+        end
+
+        if frame.lastLoyaltyLevel ~= loyaltyName then
+            local petName = UnitName("pet") or "Your pet"
+
+            local message = string.format(
+                "%s loyalty changed to %s!",
+                petName,
+                loyaltyName
+            )
+
+            PrintMessage(message)
+            ShowLoyaltyAnnouncement(message)
+
+            frame.lastLoyaltyLevel = loyaltyName
+        end
+
+        return
+    end
+
+    -- Classic Era and TBC Anniversary provide both level and title.
+    if not loyaltyLevel then
         return
     end
 
@@ -496,6 +621,7 @@ local function CheckPetLoyalty()
 
     if loyaltyLevel > frame.lastLoyaltyLevel then
         local petName = UnitName("pet") or "Your pet"
+
         local message = string.format(
             "%s reached Loyalty Level %d - %s!",
             petName,
@@ -510,8 +636,71 @@ local function CheckPetLoyalty()
     frame.lastLoyaltyLevel = loyaltyLevel
 end
 
-local function GetPetAuraByName(auraName, allowRankSuffix)
+local function ResetPetLevelTracking()
+    frame.lastPetLevelGUID = nil
+    frame.lastPetLevel = nil
+end
+
+local function CheckPetLevel()
     if not UnitExists("pet") then
+        ResetPetLevelTracking()
+        return
+    end
+
+    local petGUID = UnitGUID("pet")
+    local petLevel = UnitLevel("pet")
+
+    if not petGUID or not petLevel or petLevel <= 0 then
+        return
+    end
+
+    -- A newly summoned or newly tamed pet establishes a baseline only.
+    -- It must not trigger a false level-up notification.
+    if frame.lastPetLevelGUID ~= petGUID then
+        frame.lastPetLevelGUID = petGUID
+        frame.lastPetLevel = petLevel
+
+        PrintMessage(string.format(
+            "Tracking %s at level %d.",
+            UnitName("pet") or "pet",
+            petLevel
+        ))
+
+        return
+    end
+
+    if not frame.lastPetLevel then
+        frame.lastPetLevel = petLevel
+        return
+    end
+
+    if petLevel > frame.lastPetLevel then
+        local petName = UnitName("pet") or "Your pet"
+
+        local message = string.format(
+            "%s reached level %d!",
+            petName,
+            petLevel
+        )
+
+        PrintMessage(message)
+        ShowLoyaltyAnnouncement(message)
+    end
+
+    frame.lastPetLevel = petLevel
+end
+
+local function GetPetAuraByName(auraName, allowRankSuffix)
+    -- WoW Forever uses C_UnitAuras through BeastCare_Forever.lua.
+    if BeastCare and type(BeastCare.GetPetAuraByName) == "function" then
+        return BeastCare.GetPetAuraByName(
+            auraName,
+            allowRankSuffix
+        )
+    end
+
+    -- Classic Era and TBC Anniversary use the original UnitAura API.
+    if not UnitExists("pet") or type(UnitAura) ~= "function" then
         return nil
     end
 
@@ -529,7 +718,10 @@ local function GetPetAuraByName(auraName, allowRankSuffix)
         local matchesAura = name == auraName
 
         if allowRankSuffix and type(name) == "string" then
-            matchesAura = string.find(name, "^" .. auraName) ~= nil
+            matchesAura = string.find(
+                name,
+                "^" .. auraName
+            ) ~= nil
         end
 
         if matchesAura then
@@ -556,7 +748,10 @@ local function UpdateBuffTimerWindow(window, auraName, allowRankSuffix)
     local remainingTime = 0
 
     if expirationTime and expirationTime > 0 then
-        remainingTime = math.max(0, math.ceil(expirationTime - GetTime()))
+        remainingTime = math.max(
+            0,
+            math.ceil(expirationTime - GetTime())
+        )
     elseif duration and duration > 0 then
         remainingTime = math.ceil(duration)
     end
@@ -573,7 +768,12 @@ local function UpdateBuffTimerWindow(window, auraName, allowRankSuffix)
 end
 
 -- Options panel
-local optionsPanel = CreateFrame("Frame", "BeastCareOptionsPanel", UIParent)
+
+local optionsPanel = CreateFrame(
+    "Frame",
+    "BeastCareOptionsPanel",
+    UIParent
+)
 
 optionsPanel.name = ADDON_NAME
 
@@ -598,7 +798,7 @@ optionsPanel.subtitle:SetPoint(
     -8
 )
 optionsPanel.subtitle:SetText(
-    "Hunter pet-care tools for Burning Crusade Anniversary."
+    "Hunter pet-care tools for Classic Era, TBC Anniversary and WoW Forever."
 )
 
 optionsPanel.warningCheckbox = CreateFrame(
@@ -615,11 +815,12 @@ optionsPanel.warningCheckbox:SetPoint(
     -22
 )
 
-optionsPanel.warningCheckbox.label = optionsPanel.warningCheckbox:CreateFontString(
-    nil,
-    "ARTWORK",
-    "GameFontNormal"
-)
+optionsPanel.warningCheckbox.label =
+    optionsPanel.warningCheckbox:CreateFontString(
+        nil,
+        "ARTWORK",
+        "GameFontNormal"
+    )
 optionsPanel.warningCheckbox.label:SetPoint(
     "LEFT",
     optionsPanel.warningCheckbox,
@@ -643,11 +844,12 @@ optionsPanel.soundCheckbox:SetPoint(
     -8
 )
 
-optionsPanel.soundCheckbox.label = optionsPanel.soundCheckbox:CreateFontString(
-    nil,
-    "ARTWORK",
-    "GameFontNormal"
-)
+optionsPanel.soundCheckbox.label =
+    optionsPanel.soundCheckbox:CreateFontString(
+        nil,
+        "ARTWORK",
+        "GameFontNormal"
+    )
 optionsPanel.soundCheckbox.label:SetPoint(
     "LEFT",
     optionsPanel.soundCheckbox,
@@ -670,6 +872,7 @@ optionsPanel.mendWindowCheckbox:SetPoint(
     0,
     -8
 )
+
 optionsPanel.mendWindowCheckbox.label =
     optionsPanel.mendWindowCheckbox:CreateFontString(
         nil,
@@ -793,6 +996,7 @@ local function UpdateOptionsPanel()
     optionsPanel.soundCheckbox:SetChecked(settings.soundEnabled)
     optionsPanel.mendWindowCheckbox:SetChecked(settings.mendWindowEnabled)
     optionsPanel.intervalSlider:SetValue(settings.warningInterval)
+
     optionsPanel.intervalValue:SetText(
         string.format("%d seconds", settings.warningInterval)
     )
@@ -827,6 +1031,7 @@ optionsPanel.intervalSlider:SetScript("OnValueChanged", function(_, value)
     local interval = math.floor(value + 0.5)
 
     GetSettings().warningInterval = interval
+
     optionsPanel.intervalValue:SetText(
         string.format("%d seconds", interval)
     )
@@ -882,6 +1087,7 @@ local function OpenOptionsPanel()
 end
 
 -- Timers
+
 local elapsedSinceLastCheck = 0
 local elapsedSinceBuffCheck = 0
 
@@ -894,6 +1100,7 @@ frame:SetScript("OnUpdate", function(_, elapsed)
 
         CheckPetHappiness()
         CheckPetLoyalty()
+		CheckPetLevel()
     end
 
     if elapsedSinceBuffCheck >= 0.25 then
@@ -916,6 +1123,8 @@ frame:SetScript("OnUpdate", function(_, elapsed)
         end
     end
 end)
+
+-- Slash commands
 
 SLASH_BEASTCARE1 = "/beastcare"
 SLASH_BEASTCARE2 = "/bc"
@@ -1048,6 +1257,7 @@ SlashCmdList["BEASTCARE"] = function(message)
         ADDON_VERSION,
         ADDON_AUTHOR
     ))
+
     PrintMessage("Type |cffffffff/bc help|r for available commands.")
 end
 
