@@ -128,10 +128,7 @@ The warning interval can be set from **5** to **60** seconds.
   
  ## Known Issues
 
-WoW Forever Beta limitation!
-WoW Forever Beta currently has a known Blizzard client issue with addon SavedVariables.
-BeastCare settings and timer-window positions can reset after /reload, logging out or restarting the game. The addon saves the information correctly, but the WoW Forever client may fail to load the saved data back into the addon.
-This is a WoW Forever Beta client issue that also affects other addons. BeastCare keeps normal SavedVariables support, so settings and window positions work normally in Classic Vanilla and TBC Anniversary. 
+None at the moment
 
 ## Author
 
@@ -149,6 +146,7 @@ Created by **ThuraNL (PalletjeNL)**.
 - Draggable Feed Pet Effect timer window
 - Saved settings and window position
 
+
 ### 0.1.1
 
 - Added custom addon icon
@@ -160,6 +158,7 @@ Created by **ThuraNL (PalletjeNL)**.
 - Improved `/bc status` and `/bc help` chat formatting
 - Added separate `BeastCare_Inspect.lua` module
 
+
 ### 0.1.2
 
 - Added draggable Mend Pet timer window
@@ -168,12 +167,14 @@ Created by **ThuraNL (PalletjeNL)**.
 - Improved internal buff-timer window handling
 - Removed temporary training-points debug command
 
+
 ### 0.1.3
 
 - Added an option to enable or disable the Mend Pet timer
 - Added the Mend Pet timer status to `/bc settings`
 - Mend Pet timer is enabled by default
 - Added WoW Forever Beta interface compatibility
+
 
 ## 0.2.0
 
@@ -189,3 +190,10 @@ Created by **ThuraNL (PalletjeNL)**.
 - Added pet level-up notifications for all supported game versions
 - Kept Classic Vanilla and TBC Anniversary support
 - Documented the known WoW Forever Beta SavedVariables limitation
+
+
+### 0.2.1
+
+- Removed the incorrect pet-detection message that could appear during login.
+- Confirmed SavedVariables persistence for WoW Forever settings and timer-window positions.
+- Completed WoW Forever testing for Feed Pet Effect and Mend Pet timers.

@@ -1292,12 +1292,6 @@ frame:SetScript("OnEvent", function(self, event, unit)
             ADDON_AUTHOR
         ))
 
-        if UnitExists("pet") then
-            PrintMessage("Active pet detected.")
-        else
-            PrintMessage("No active pet detected.")
-        end
-
         return
     end
 

@@ -2,7 +2,7 @@
 ## Interface: 20506, 11509, 16001
 ## Notes: Hunter pet care for classic WoW, TBC anniversary and WoW Forever
 ## Author: ThuraNL (PalletjeNL)
-## Version: 0.2.0
+## Version: 0.2.1
 ## SavedVariables: BeastCareDB
 ## IconTexture: Interface\AddOns\BeastCare\BeastCare
 
